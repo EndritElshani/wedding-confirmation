@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Search } from 'lucide-react';
-import { invitedFamilies, SCRIPT_URL } from './guestlist';
+import { invitedFamilies, SCRIPT_URL } from '../lib/guestlist';
 import { useRouter } from 'next/router';
 
 const WeddingLanding = () => {
