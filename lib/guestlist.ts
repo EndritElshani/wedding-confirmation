@@ -70,7 +70,7 @@ export const invitedFamilies = [
     }
   ];
   
-  export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj_l39qiKwHzcDzJWQP4Qyx3WJck0PNk3STbrSdmqMIQpUIDZvSJU0g0mDKXieL9x2/exec';
+  export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzi0zkFVvIOFIw1X6MEfOcwQ3WiQDWY6cM-4-tZ-sKzgrB8yGd5A4gxOt-zZ1fXZgZM/exec';
   
   export const checkExistingSubmission = async (familyName) => {
     try {
