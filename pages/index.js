@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Check, X, Search } from 'lucide-react';
 import { invitedFamilies, SCRIPT_URL, generateSubmissionKey } from '../lib/guestlist';
 import { useRouter } from 'next/router';
@@ -56,7 +56,7 @@ const WeddingLanding = () => {
     )
     .slice(0, 5);
 
-  const handleMemberToggle = (memberName) => {
+  const handleMemberToggle = useCallback((memberName) => {
     setAttendingMembers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(memberName)) {
@@ -66,9 +66,11 @@ const WeddingLanding = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevent any form submission
+    
     if (!selectedFamily) {
       setError('Ju lutem zgjidhni një familje.');
       return;
@@ -83,6 +85,7 @@ const WeddingLanding = () => {
     setIsSubmitting(true);
 
     try {
+      const formData = new FormData();
       const submissionData = {
         submissionDate: new Date().toISOString(),
         familyName: selectedFamily.familyName,
@@ -92,23 +95,25 @@ const WeddingLanding = () => {
         additionalNotes: notes || ''
       };
 
+      // Add each field to FormData
+      Object.entries(submissionData).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
+        body: formData
       });
 
-      // Since we're using no-cors, we won't get a proper response
-      // Wait a moment to ensure the submission went through
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait to ensure submission completes
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
       setError('Ndodhi një problem. Ju lutem provoni përsëri.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -139,7 +144,7 @@ const WeddingLanding = () => {
       </header>
 
       <section className="max-w-md mx-auto">
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 shadow-xl border border-gray-700/50">
+        <form onSubmit={handleSubmit} className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 shadow-xl border border-gray-700/50">
           <h2 className="text-2xl font-light mb-8 text-center">Konfirmimi i Pjesëmarrjes</h2>
 
           {error && (
@@ -209,17 +214,17 @@ const WeddingLanding = () => {
                 )}
               </div>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 {selectedFamily.members.map((member) => (
                   <button
                     key={member}
+                    type="button" // Important: specify button type
                     onClick={() => handleMemberToggle(member)}
-                    className={`p-4 rounded-lg transition-all ${
+                    className={`p-4 rounded-lg transition-colors ${
                       attendingMembers.has(member)
                         ? 'bg-pink-600 text-white'
                         : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                     }`}
-                    type="button"
                   >
                     <span className="flex items-center gap-2">
                       {attendingMembers.has(member) && <Check className="w-4 h-4" />}
@@ -240,7 +245,7 @@ const WeddingLanding = () => {
               </div>
 
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isSubmitting}
                 className={`w-full ${
                   isSubmitting ? 'bg-pink-600/50' : 'bg-pink-600 hover:bg-pink-500'
@@ -250,7 +255,7 @@ const WeddingLanding = () => {
               </button>
             </div>
           )}
-        </div>
+        </form>
       </section>
     </main>
   );
