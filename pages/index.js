@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Search } from 'lucide-react';
-import { invitedFamilies, SCRIPT_URL } from '../lib/guestlist';
+import { invitedFamilies, SCRIPT_URL, generateSubmissionKey } from '../lib/guestlist';
 import { useRouter } from 'next/router';
 
 const WeddingLanding = () => {
@@ -11,19 +11,44 @@ const WeddingLanding = () => {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionKey, setSubmissionKey] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const checkExistingSubmission = async (familyName) => {
+    try {
+      // Add a query parameter to differentiate check requests
+      const response = await fetch(`${SCRIPT_URL}?check=true&family=${encodeURIComponent(familyName)}`, {
+        method: 'GET',
+      });
+      
+      const data = await response.json();
+      return data; // { exists: boolean, submission?: SubmissionData }
+    } catch (err) {
+      console.error('Check submission error:', err);
+      return { exists: false };
+    }
+  };
 
   useEffect(() => {
-    const savedRSVP = localStorage.getItem('weddingRSVP');
-    if (savedRSVP) {
-      const data = JSON.parse(savedRSVP);
-      const family = invitedFamilies.find(f => f.familyName === data.familyName);
-      if (family) {
-        setSelectedFamily(family);
-        setAttendingMembers(new Set(data.memberNames));
-        setNotes(data.additionalNotes);
+    const verifyFamily = async () => {
+      if (selectedFamily) {
+        const result = await checkExistingSubmission(selectedFamily.familyName);
+        
+        if (result.exists) {
+          // If submission exists, show edit mode with existing data
+          setIsEditMode(true);
+          setAttendingMembers(new Set(result.submission.memberNames.split(', ')));
+          setNotes(result.submission.additionalNotes || '');
+        } else {
+          setIsEditMode(false);
+          setAttendingMembers(new Set());
+          setNotes('');
+        }
       }
-    }
-  }, []);
+    };
+
+    verifyFamily();
+  }, [selectedFamily]);
 
   const filteredFamilies = invitedFamilies
     .filter(family =>
@@ -68,18 +93,9 @@ const WeddingLanding = () => {
         memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
         additionalNotes: notes || '',
-        isUpdate: false
+        isUpdate: isEditMode
       };
 
-      // Check if this is an update
-      const existingRSVP = localStorage.getItem('weddingRSVP');
-      if (existingRSVP) {
-        const existingData = JSON.parse(existingRSVP);
-        submissionData.isUpdate = true;
-        submissionData.previousFamilyName = existingData.familyName;
-      }
-
-      // Send to Google Sheets - removed mode: 'no-cors' and stringified the data differently
       await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: {
@@ -88,13 +104,6 @@ const WeddingLanding = () => {
         body: JSON.stringify(submissionData)
       });
 
-      // Store in localStorage (store the full array version for local use)
-      const localStorageData = {
-        ...submissionData,
-        memberNames: Array.from(attendingMembers)
-      };
-      localStorage.setItem('weddingRSVP', JSON.stringify(localStorageData));
-      
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
@@ -182,18 +191,22 @@ const WeddingLanding = () => {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-light">{selectedFamily.familyName}</h3>
-                <button
-                  onClick={() => {
-                    setSelectedFamily(null);
-                    setSearchTerm('');
-                    setAttendingMembers(new Set());
-                    setNotes('');
-                  }}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all flex items-center gap-2 border border-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                  Ndrysho familjen
-                </button>
+                {isEditMode ? (
+                  <div className="text-sm text-pink-400">Duke ndryshuar rezervimin</div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSelectedFamily(null);
+                      setSearchTerm('');
+                      setAttendingMembers(new Set());
+                      setNotes('');
+                    }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all flex items-center gap-2 border border-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                    Ndrysho familjen
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">

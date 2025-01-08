@@ -1,5 +1,17 @@
 // guestList.ts
 
+export interface FamilySubmission {
+  familyName: string;
+  submissionDate: string;
+  memberNames: string[];
+  additionalNotes?: string;
+  submissionKey?: string;
+}
+
+export const generateSubmissionKey = (familyName: string): string => {
+  return btoa(familyName.toLowerCase().replace(/\s/g, '')); // Simple encoding
+};
+
 export const invitedFamilies = [
     {
       id: 1,
@@ -50,6 +62,11 @@ export const invitedFamilies = [
       id: 10,
       familyName: 'Lulzim Voca',
       members: ['Lulzim', 'Linda', 'Leart', 'Lea']
+    },
+    {
+      id: 11,
+      familyName: 'Bajram Kryeziu',
+      members: ['Zejnep', 'Harisa', 'Rijad', 'Vaxhide', 'Bajram']
     }
   ];
   
