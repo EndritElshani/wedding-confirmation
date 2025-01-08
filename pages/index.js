@@ -92,15 +92,9 @@ const WeddingLanding = () => {
         memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
         additionalNotes: notes || '',
-        isUpdate: isEditMode
+        isUpdate: isEditMode,
+        previousFamilyName: isEditMode ? selectedFamily.familyName : undefined
       };
-
-      // Save to localStorage
-      localStorage.setItem('weddingRSVP', JSON.stringify({
-        familyName: selectedFamily.familyName,
-        memberNames: Array.from(attendingMembers),
-        additionalNotes: notes
-      }));
 
       // Submit to Google Sheets
       const response = await fetch(SCRIPT_URL, {
@@ -111,14 +105,23 @@ const WeddingLanding = () => {
         body: JSON.stringify(submissionData),
       });
 
+      const responseText = await response.text();
+      
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error(`Server responded with ${response.status}: ${responseText}`);
       }
+
+      // Save to localStorage only after successful submission
+      localStorage.setItem('weddingRSVP', JSON.stringify({
+        familyName: selectedFamily.familyName,
+        memberNames: Array.from(attendingMembers),
+        additionalNotes: notes
+      }));
 
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
-      setError('Ndodhi një problem. Ju lutem provoni përsëri.');
+      setError(`Ndodhi një problem: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
