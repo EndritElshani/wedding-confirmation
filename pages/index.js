@@ -96,21 +96,26 @@ const WeddingLanding = () => {
         previousFamilyName: isEditMode ? selectedFamily.familyName : undefined
       };
 
-      console.log('Submitting data:', submissionData); // Debug log
+      console.log('Submitting data:', submissionData);
+      console.log('To URL:', SCRIPT_URL);
 
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(submissionData),
       });
 
+      console.log('Response status:', response.status);
       const responseText = await response.text();
-      console.log('Server response:', responseText); // Debug log
+      console.log('Response text:', responseText);
 
-      if (!response.ok) {
-        throw new Error(`Server response: ${responseText}`);
+      const data = JSON.parse(responseText);
+      
+      if (data.status === 'error') {
+        throw new Error(data.message);
       }
 
       // Save to localStorage only after successful submission
@@ -122,7 +127,7 @@ const WeddingLanding = () => {
 
       router.push('/submitted');
     } catch (err) {
-      console.error('Submission error:', err);
+      console.error('Detailed submission error:', err);
       setError(`Gabim në dërgim: ${err.message}`);
     } finally {
       setIsSubmitting(false);
