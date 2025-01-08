@@ -56,35 +56,32 @@ const WeddingLanding = () => {
     )
     .slice(0, 5);
 
-  const handleMemberClick = (member) => {
+  const handleMemberToggle = (memberName) => {
     setAttendingMembers(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(member)) {
-        newSet.delete(member);
+      if (newSet.has(memberName)) {
+        newSet.delete(memberName);
       } else {
-        newSet.add(member);
+        newSet.add(memberName);
       }
       return newSet;
     });
   };
 
   const handleSubmit = async () => {
-    // Reset error state
-    setError('');
-    
-    // Validate family selection
     if (!selectedFamily) {
-      setError('Ju lutem zgjidhni një familje');
+      setError('Ju lutem zgjidhni një familje.');
       return;
     }
 
-    // Validate attending members
     if (attendingMembers.size === 0) {
-      setError('Ju lutem zgjidhni të paktën një anëtar');
+      setError('Ju lutem zgjidhni së paku një anëtar.');
       return;
     }
 
+    setError('');
     setIsSubmitting(true);
+
     try {
       const submissionData = {
         submissionDate: new Date().toISOString(),
@@ -92,23 +89,26 @@ const WeddingLanding = () => {
         attendingStatus: 'Attending',
         memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
-        additionalNotes: notes || '',
-        isUpdate: isEditMode
+        additionalNotes: notes || ''
       };
 
-      await fetch(SCRIPT_URL, {
+      const response = await fetch(SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(submissionData)
+        body: JSON.stringify(submissionData),
       });
 
+      // Since we're using no-cors, we won't get a proper response
+      // Wait a moment to ensure the submission went through
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
       setError('Ndodhi një problem. Ju lutem provoni përsëri.');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -210,27 +210,22 @@ const WeddingLanding = () => {
               </div>
 
               <div className="space-y-3">
-                {selectedFamily.members.map((member, index) => (
-                  <div key={index} className="p-4 bg-white/5 rounded-lg border border-gray-700/50 transition-all hover:border-gray-600/50">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-200">{member}</span>
-                      <button
-                        onClick={() => handleMemberClick(member)}
-                        className={`px-4 py-2 rounded-lg transition-all ${
-                          attendingMembers.has(member)
-                            ? 'bg-pink-600 hover:bg-pink-500 text-white'
-                            : 'bg-white/5 hover:bg-white/10 border border-gray-700/50'
-                        }`}
-                      >
-                        {attendingMembers.has(member) ? (
-                          <span className="flex items-center gap-2">
-                            <Check className="w-4 h-4" />
-                            Po
-                          </span>
-                        ) : 'Konfirmo'}
-                      </button>
-                    </div>
-                  </div>
+                {selectedFamily.members.map((member) => (
+                  <button
+                    key={member}
+                    onClick={() => handleMemberToggle(member)}
+                    className={`p-4 rounded-lg transition-all ${
+                      attendingMembers.has(member)
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                    type="button"
+                  >
+                    <span className="flex items-center gap-2">
+                      {attendingMembers.has(member) && <Check className="w-4 h-4" />}
+                      {member}
+                    </span>
+                  </button>
                 ))}
               </div>
 
