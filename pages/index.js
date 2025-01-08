@@ -56,13 +56,13 @@ const WeddingLanding = () => {
     )
     .slice(0, 5);
 
-  const handleMemberToggle = useCallback((memberName) => {
+  const handleMemberToggle = useCallback((member) => {
     setAttendingMembers(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(memberName)) {
-        newSet.delete(memberName);
+      if (newSet.has(member)) {
+        newSet.delete(member);
       } else {
-        newSet.add(memberName);
+        newSet.add(member);
       }
       return newSet;
     });
@@ -96,7 +96,8 @@ const WeddingLanding = () => {
         previousFamilyName: isEditMode ? selectedFamily.familyName : undefined
       };
 
-      // Submit to Google Sheets
+      console.log('Submitting data:', submissionData); // Debug log
+
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: {
@@ -106,9 +107,10 @@ const WeddingLanding = () => {
       });
 
       const responseText = await response.text();
-      
+      console.log('Server response:', responseText); // Debug log
+
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}: ${responseText}`);
+        throw new Error(`Server response: ${responseText}`);
       }
 
       // Save to localStorage only after successful submission
@@ -121,7 +123,7 @@ const WeddingLanding = () => {
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
-      setError(`Ndodhi një problem: ${err.message}`);
+      setError(`Gabim në dërgim: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -143,6 +145,30 @@ const WeddingLanding = () => {
       }
     }
   }, [selectedFamily]);
+
+  // Replace the member selection buttons with checkboxes for better UX
+  const renderMemberSelection = () => (
+    <div className="space-y-3">
+      {selectedFamily.members.map((member) => (
+        <label
+          key={member}
+          className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors ${
+            attendingMembers.has(member)
+              ? 'bg-pink-600/20 border border-pink-500/50'
+              : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={attendingMembers.has(member)}
+            onChange={() => handleMemberToggle(member)}
+            className="w-5 h-5 rounded border-gray-600 text-pink-600 focus:ring-pink-500 focus:ring-offset-gray-800"
+          />
+          <span className="ml-3 text-lg">{member}</span>
+        </label>
+      ))}
+    </div>
+  );
 
   if (isSubmitting) {
     return (
@@ -222,43 +248,22 @@ const WeddingLanding = () => {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-light">{selectedFamily.familyName}</h3>
-                {isEditMode ? (
-                  <div className="text-sm text-pink-400">Duke ndryshuar rezervimin</div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setSelectedFamily(null);
-                      setSearchTerm('');
-                      setAttendingMembers(new Set());
-                      setNotes('');
-                    }}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all flex items-center gap-2 border border-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                    Ndrysho familjen
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFamily(null);
+                    setSearchTerm('');
+                    setAttendingMembers(new Set());
+                    setNotes('');
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all flex items-center gap-2 border border-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                  Ndrysho familjen
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {selectedFamily.members.map((member) => (
-                  <button
-                    key={member}
-                    type="button" // Important: specify button type
-                    onClick={() => handleMemberToggle(member)}
-                    className={`p-4 rounded-lg transition-colors ${
-                      attendingMembers.has(member)
-                        ? 'bg-pink-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {attendingMembers.has(member) && <Check className="w-4 h-4" />}
-                      {member}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {renderMemberSelection()}
 
               <div className="space-y-2">
                 <label className="block text-gray-300 text-sm">Shënime shtesë</label>

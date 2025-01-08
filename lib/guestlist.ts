@@ -72,3 +72,13 @@ export const invitedFamilies = [
   
   export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj_l39qiKwHzcDzJWQP4Qyx3WJck0PNk3STbrSdmqMIQpUIDZvSJU0g0mDKXieL9x2/exec';
   
+  export const checkExistingSubmission = async (familyName) => {
+    try {
+      const response = await fetch(`${SCRIPT_URL}?check=true&family=${encodeURIComponent(familyName)}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error checking submission:', error);
+      return { exists: false };
+    }
+  };

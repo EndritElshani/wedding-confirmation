@@ -39,8 +39,10 @@ const SubmittedPage = () => {
     const savedRSVP = localStorage.getItem('weddingRSVP');
     if (savedRSVP) {
       setRsvpData(JSON.parse(savedRSVP));
+    } else {
+      router.push('/');
     }
-  }, []);
+  }, [router]);
 
   const handleEdit = () => {
     router.push('/');
@@ -61,6 +63,10 @@ const SubmittedPage = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (!rsvpData) {
+    return null;
+  }
 
   const { googleUrl } = createCalendarEvent();
 
