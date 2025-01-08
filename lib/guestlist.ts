@@ -70,5 +70,5 @@ export const invitedFamilies = [
     }
   ];
   
-  export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuSrCO8WgJZopyO08U4h6cobZdsPHB-kTwTUzMASyJM5GGgx3129iS8ZAWfrL10bD6/exec';
+  export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTNcndq8j3o6CuP4q9YvkV3GzNT2_1GP4-xi3K4rf-AZY7xihzytZ4n7z2ULZGPsJf/exec';
   

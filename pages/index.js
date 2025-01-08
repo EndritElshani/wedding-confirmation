@@ -69,7 +69,7 @@ const WeddingLanding = () => {
   }, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent any form submission
+    e.preventDefault();
     
     if (!selectedFamily) {
       setError('Ju lutem zgjidhni një familje.');
@@ -85,25 +85,27 @@ const WeddingLanding = () => {
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
+      // Create URLSearchParams instead of FormData
+      const params = new URLSearchParams();
       const submissionData = {
-        submissionDate: new Date().toISOString(),
         familyName: selectedFamily.familyName,
-        attendingStatus: 'Attending',
-        memberCount: attendingMembers.size,
+        memberCount: attendingMembers.size.toString(),
         memberNames: Array.from(attendingMembers).join(', '),
         additionalNotes: notes || ''
       };
 
-      // Add each field to FormData
+      // Add data to URLSearchParams
       Object.entries(submissionData).forEach(([key, value]) => {
-        formData.append(key, value);
+        params.append(key, value);
       });
 
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        body: formData
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString()
       });
 
       // Wait to ensure submission completes
