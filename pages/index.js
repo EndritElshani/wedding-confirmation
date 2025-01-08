@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, X, Search } from 'lucide-react';
-import { invitedFamilies, SCRIPT_URL, generateSubmissionKey } from '../lib/guestlist';
+import { invitedFamilies, SCRIPT_URL } from '../lib/guestlist';
 import { useRouter } from 'next/router';
 
 const WeddingLanding = () => {
@@ -11,43 +11,19 @@ const WeddingLanding = () => {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionKey, setSubmissionKey] = useState(null);
-  const [isEditMode, setIsEditMode] = useState(false);
 
-  const checkExistingSubmission = async (familyName) => {
-    try {
-      // Add a query parameter to differentiate check requests
-      const response = await fetch(`${SCRIPT_URL}?check=true&family=${encodeURIComponent(familyName)}`, {
-        method: 'GET',
-      });
-      
-      const data = await response.json();
-      return data; // { exists: boolean, submission?: SubmissionData }
-    } catch (err) {
-      console.error('Check submission error:', err);
-      return { exists: false };
-    }
-  };
-
+  // Check localStorage when family is selected
   useEffect(() => {
-    const verifyFamily = async () => {
-      if (selectedFamily) {
-        const result = await checkExistingSubmission(selectedFamily.familyName);
-        
-        if (result.exists) {
-          // If submission exists, show edit mode with existing data
-          setIsEditMode(true);
-          setAttendingMembers(new Set(result.submission.memberNames.split(', ')));
-          setNotes(result.submission.additionalNotes || '');
-        } else {
-          setIsEditMode(false);
-          setAttendingMembers(new Set());
-          setNotes('');
+    if (selectedFamily) {
+      const savedRSVP = localStorage.getItem('weddingRSVP');
+      if (savedRSVP) {
+        const data = JSON.parse(savedRSVP);
+        if (data.familyName === selectedFamily.familyName) {
+          setAttendingMembers(new Set(data.memberNames));
+          setNotes(data.additionalNotes || '');
         }
       }
-    };
-
-    verifyFamily();
+    }
   }, [selectedFamily]);
 
   const filteredFamilies = invitedFamilies
@@ -56,7 +32,7 @@ const WeddingLanding = () => {
     )
     .slice(0, 5);
 
-  const handleMemberToggle = useCallback((member) => {
+  const handleMemberToggle = (member) => {
     setAttendingMembers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(member)) {
@@ -66,7 +42,7 @@ const WeddingLanding = () => {
       }
       return newSet;
     });
-  }, []);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,18 +62,10 @@ const WeddingLanding = () => {
 
     try {
       const submissionData = {
-        submissionDate: new Date().toISOString(),
         familyName: selectedFamily.familyName,
-        attendingStatus: 'Attending',
-        memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
-        additionalNotes: notes || '',
-        isUpdate: isEditMode,
-        previousFamilyName: isEditMode ? selectedFamily.familyName : undefined
+        additionalNotes: notes || ''
       };
-
-      console.log('Submitting data:', submissionData);
-      console.log('To URL:', SCRIPT_URL);
 
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -108,17 +76,13 @@ const WeddingLanding = () => {
         body: JSON.stringify(submissionData),
       });
 
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
-
-      const data = JSON.parse(responseText);
+      const data = await response.json();
       
       if (data.status === 'error') {
         throw new Error(data.message);
       }
 
-      // Save to localStorage only after successful submission
+      // Save to localStorage
       localStorage.setItem('weddingRSVP', JSON.stringify({
         familyName: selectedFamily.familyName,
         memberNames: Array.from(attendingMembers),
@@ -127,53 +91,12 @@ const WeddingLanding = () => {
 
       router.push('/submitted');
     } catch (err) {
-      console.error('Detailed submission error:', err);
+      console.error('Submission error:', err);
       setError(`Gabim në dërgim: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Check localStorage when family is selected
-  useEffect(() => {
-    if (selectedFamily) {
-      const savedData = localStorage.getItem(`family_${selectedFamily.familyName}`);
-      if (savedData) {
-        const data = JSON.parse(savedData);
-        setAttendingMembers(new Set(data.members));
-        setNotes(data.notes || '');
-        setError('Kjo familje tashmë e ka konfirmuar pjesëmarrjen. Mund të bëni ndryshime nëse dëshironi.');
-      } else {
-        setAttendingMembers(new Set());
-        setNotes('');
-        setError('');
-      }
-    }
-  }, [selectedFamily]);
-
-  // Replace the member selection buttons with checkboxes for better UX
-  const renderMemberSelection = () => (
-    <div className="space-y-3">
-      {selectedFamily.members.map((member) => (
-        <label
-          key={member}
-          className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors ${
-            attendingMembers.has(member)
-              ? 'bg-pink-600/20 border border-pink-500/50'
-              : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
-          }`}
-        >
-          <input
-            type="checkbox"
-            checked={attendingMembers.has(member)}
-            onChange={() => handleMemberToggle(member)}
-            className="w-5 h-5 rounded border-gray-600 text-pink-600 focus:ring-pink-500 focus:ring-offset-gray-800"
-          />
-          <span className="ml-3 text-lg">{member}</span>
-        </label>
-      ))}
-    </div>
-  );
 
   if (isSubmitting) {
     return (
@@ -196,7 +119,7 @@ const WeddingLanding = () => {
         <p className="text-lg text-pink-400 mb-2">11 Gusht, 2025 | 19:00</p>
         <p className="text-lg text-pink-400 mb-8">Lindi Prestige, Prizren, Kosovo</p>
         <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed font-light italic">
-        Familja Elshani ka kënaqësinë t’ju ftojë të ndani me ne këtë moment të veçantë. Prania juaj do ta zbukurojë dhe bëjë këtë ditë të paharrueshme.
+          Familja Elshani ka kënaqësinë t'ju ftojë të ndani me ne këtë moment të veçantë. Prania juaj do ta zbukurojë dhe bëjë këtë ditë të paharrueshme.
         </p>
       </header>
 
@@ -229,9 +152,10 @@ const WeddingLanding = () => {
                   {filteredFamilies.map(family => (
                     <button
                       key={family.id}
+                      type="button"
                       onClick={() => {
                         setSelectedFamily(family);
-                        setAttendingMembers(new Set());
+                        setSearchTerm('');
                       }}
                       className="w-full p-4 text-left bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-gray-700/50 group"
                     >
@@ -241,7 +165,7 @@ const WeddingLanding = () => {
                       </span>
                     </button>
                   ))}
-                  {searchTerm.length > 0 && filteredFamilies.length === 0 && (
+                  {filteredFamilies.length === 0 && (
                     <p className="text-center text-gray-400 py-4">
                       Nuk u gjet asnjë familje me këtë mbiemër
                     </p>
@@ -257,7 +181,6 @@ const WeddingLanding = () => {
                   type="button"
                   onClick={() => {
                     setSelectedFamily(null);
-                    setSearchTerm('');
                     setAttendingMembers(new Set());
                     setNotes('');
                   }}
@@ -268,7 +191,26 @@ const WeddingLanding = () => {
                 </button>
               </div>
 
-              {renderMemberSelection()}
+              <div className="space-y-3">
+                {selectedFamily.members.map((member) => (
+                  <label
+                    key={member}
+                    className={`flex items-center p-4 rounded-lg cursor-pointer transition-colors ${
+                      attendingMembers.has(member)
+                        ? 'bg-pink-600/20 border border-pink-500/50'
+                        : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={attendingMembers.has(member)}
+                      onChange={() => handleMemberToggle(member)}
+                      className="w-5 h-5 rounded border-gray-600 text-pink-600 focus:ring-pink-500 focus:ring-offset-gray-800"
+                    />
+                    <span className="ml-3 text-lg">{member}</span>
+                  </label>
+                ))}
+              </div>
 
               <div className="space-y-2">
                 <label className="block text-gray-300 text-sm">Shënime shtesë</label>
@@ -282,12 +224,9 @@ const WeddingLanding = () => {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className={`w-full ${
-                  isSubmitting ? 'bg-pink-600/50' : 'bg-pink-600 hover:bg-pink-500'
-                } text-white p-4 rounded-lg font-medium transition-all`}
+                className="w-full bg-pink-600 hover:bg-pink-500 text-white p-4 rounded-lg font-medium transition-all"
               >
-                {isSubmitting ? 'Duke dërguar...' : 'Konfirmo pjesëmarrjen'}
+                Konfirmo pjesëmarrjen
               </button>
             </div>
           )}
