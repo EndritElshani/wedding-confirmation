@@ -85,32 +85,38 @@ const WeddingLanding = () => {
     setIsSubmitting(true);
 
     try {
-      // Create URLSearchParams instead of FormData
-      const params = new URLSearchParams();
       const submissionData = {
+        date: new Date().toISOString(),
         familyName: selectedFamily.familyName,
-        memberCount: attendingMembers.size.toString(),
+        members: Array.from(attendingMembers),
+        notes: notes
+      };
+
+      // Save to localStorage
+      localStorage.setItem(
+        `family_${selectedFamily.familyName}`, 
+        JSON.stringify(submissionData)
+      );
+
+      // Optional: Still try to submit to Google Sheets
+      const sheetData = {
+        submissionDate: submissionData.date,
+        familyName: submissionData.familyName,
+        attendingStatus: 'Attending',
+        memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
         additionalNotes: notes || ''
       };
 
-      // Add data to URLSearchParams
-      Object.entries(submissionData).forEach(([key, value]) => {
-        params.append(key, value);
-      });
-
-      const response = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: params.toString()
+        body: JSON.stringify(sheetData),
       });
 
-      // Wait to ensure submission completes
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       router.push('/submitted');
     } catch (err) {
       console.error('Submission error:', err);
@@ -119,6 +125,23 @@ const WeddingLanding = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Check localStorage when family is selected
+  useEffect(() => {
+    if (selectedFamily) {
+      const savedData = localStorage.getItem(`family_${selectedFamily.familyName}`);
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        setAttendingMembers(new Set(data.members));
+        setNotes(data.notes || '');
+        setError('Kjo familje tashmë e ka konfirmuar pjesëmarrjen. Mund të bëni ndryshime nëse dëshironi.');
+      } else {
+        setAttendingMembers(new Set());
+        setNotes('');
+        setError('');
+      }
+    }
+  }, [selectedFamily]);
 
   if (isSubmitting) {
     return (
