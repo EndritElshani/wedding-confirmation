@@ -86,36 +86,34 @@ const WeddingLanding = () => {
 
     try {
       const submissionData = {
-        date: new Date().toISOString(),
+        submissionDate: new Date().toISOString(),
         familyName: selectedFamily.familyName,
-        members: Array.from(attendingMembers),
-        notes: notes
-      };
-
-      // Save to localStorage
-      localStorage.setItem(
-        `family_${selectedFamily.familyName}`, 
-        JSON.stringify(submissionData)
-      );
-
-      // Optional: Still try to submit to Google Sheets
-      const sheetData = {
-        submissionDate: submissionData.date,
-        familyName: submissionData.familyName,
         attendingStatus: 'Attending',
         memberCount: attendingMembers.size,
         memberNames: Array.from(attendingMembers).join(', '),
-        additionalNotes: notes || ''
+        additionalNotes: notes || '',
+        isUpdate: isEditMode
       };
 
-      await fetch(SCRIPT_URL, {
+      // Save to localStorage
+      localStorage.setItem('weddingRSVP', JSON.stringify({
+        familyName: selectedFamily.familyName,
+        memberNames: Array.from(attendingMembers),
+        additionalNotes: notes
+      }));
+
+      // Submit to Google Sheets
+      const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sheetData),
+        body: JSON.stringify(submissionData),
       });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
       router.push('/submitted');
     } catch (err) {
